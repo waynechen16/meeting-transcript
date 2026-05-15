@@ -1,0 +1,14 @@
+# ML dependencies — install separately after bootstrap
+# These are large and take time; not required for server skeleton tests.
+#
+#   cd sidecar && pip install -r requirements-ml.txt
+
+# Whisper inference (CTranslate2-based)
+faster-whisper>=1.0.0
+
+# Silero VAD
+silero-vad>=5.1.0
+
+# PyTorch CPU — replace with +cu118/+cu121 wheel for GPU
+torch>=2.3.0
+torchaudio>=2.3.0

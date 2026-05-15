@@ -1,0 +1,16 @@
+[package]
+name = "meeting-transcript"
+version = "0.1.0"
+edition = "2021"
+description = "Tauri shell for Meeting Transcript Tool (Phase 2)"
+
+# Phase 2 dependencies — uncomment and extend when starting P2-1.
+# [dependencies]
+# tauri = { version = "2", features = ["shell-sidecar"] }
+# cpal = "0.15"
+# rusqlite = { version = "0.31", features = ["bundled"] }
+# serde = { version = "1", features = ["derive"] }
+# serde_json = "1"
+# tokio = { version = "1", features = ["full"] }
+
+[dependencies]
