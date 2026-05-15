@@ -2,11 +2,18 @@
 # These are large and take time; not required for server skeleton tests.
 #
 #   cd sidecar && pip install -r requirements-ml.txt
+#
+# whisper_streaming is vendored at sidecar/vendor/whisper_streaming/
+# (no pip package — copied from github.com/ufal/whisper_streaming)
 
 # Whisper inference (CTranslate2-based)
 faster-whisper>=1.0.0
 
-# Silero VAD
+# Required by vendor/whisper_streaming/whisper_online.py
+librosa>=0.10.0
+soundfile>=0.12.0
+
+# Silero VAD (used in P1-3)
 silero-vad>=5.1.0
 
 # PyTorch CPU — replace with +cu118/+cu121 wheel for GPU
