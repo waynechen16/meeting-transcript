@@ -1,0 +1,36 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+}
+
+.segment {
+  display: flex;
+  gap: 12px;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.timestamp {
+  flex-shrink: 0;
+  color: #555;
+  font-size: 0.8rem;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.text {
+  color: #e8e8e8;
+}
+
+/* Pending (in-flight) row */
+.pending {
+  opacity: 0.45;
+}
+
+.pending .text {
+  font-style: italic;
+  color: #ccc;
+}

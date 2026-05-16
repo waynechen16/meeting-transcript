@@ -1,0 +1,36 @@
+.bar {
+  padding: 12px 20px;
+  border-top: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+
+.btnStart,
+.btnStop {
+  padding: 8px 24px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.btnStart {
+  background: #2563eb;
+  color: white;
+}
+
+.btnStart:hover {
+  background: #1d4ed8;
+}
+
+.btnStop {
+  background: #dc2626;
+  color: white;
+}
+
+.btnStop:hover {
+  background: #b91c1c;
+}

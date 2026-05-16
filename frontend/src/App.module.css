@@ -1,0 +1,22 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.header {
+  padding: 12px 20px;
+  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+.header h1 {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #999;
+}
+
+.transcriptArea {
+  flex: 1;
+  overflow-y: auto;
+}
