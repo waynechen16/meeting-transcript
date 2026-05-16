@@ -3,7 +3,7 @@ FastAPI application — Phase 1 entry point.
 
 WebSocket /stream endpoint: P1-1
 STT engine wired:          P1-2
-VAD chunker:               P1-3
+VAD chunker wired:         P1-3
 SQLite storage:            P1-7
 """
 
@@ -18,6 +18,7 @@ import sys
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
 from stt import WhisperStreamingEngine
+from vad import SileroVADChunker
 
 # All logs go to stderr so stdout remains clean for Phase 2 sidecar IPC.
 logging.basicConfig(
@@ -46,6 +47,7 @@ async def stream(websocket: WebSocket) -> None:
     await websocket.accept()
     logger.info("Client connected")
     engine = WhisperStreamingEngine(model_size=MODEL_SIZE)
+    vad = SileroVADChunker()
     loop = asyncio.get_event_loop()
     try:
         while True:
@@ -55,12 +57,20 @@ async def stream(websocket: WebSocket) -> None:
                 await websocket.send_json({"type": "error", "message": "chunk too large"})
                 continue
 
-            events = await loop.run_in_executor(None, engine.process, data)
-            for ev in events:
-                await websocket.send_json(ev)
+            audio, flush = await loop.run_in_executor(None, vad.feed, data)
+
+            if audio is not None:
+                events = await loop.run_in_executor(None, engine.process, audio)
+                for ev in events:
+                    await websocket.send_json(ev)
+
+            if flush:
+                events = await loop.run_in_executor(None, engine.flush_and_reset)
+                for ev in events:
+                    await websocket.send_json(ev)
 
     except WebSocketDisconnect:
-        # Flush any remaining committed text; connection may already be closed.
+        vad.reset()
         for ev in engine.flush():
             with contextlib.suppress(Exception):
                 await websocket.send_json(ev)

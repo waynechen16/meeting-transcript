@@ -95,6 +95,16 @@ class WhisperStreamingEngine:
             return [_make_event(text, beg, end, is_final=True)]
         return []
 
+    def flush_and_reset(self) -> list[dict]:
+        """Flush remaining text and reset processor for the next utterance.
+
+        Called by the VAD layer at each utterance boundary so that timestamps
+        restart from zero and the audio buffer does not carry over stale audio.
+        """
+        events = self.flush()
+        self.processor.init()
+        return events
+
 
 # ---------------------------------------------------------------------------
 # Helpers
