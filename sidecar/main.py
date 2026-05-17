@@ -14,9 +14,14 @@ import contextlib
 import logging
 import os
 import sys
+import time
+import uuid
+from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 
+from db import Database
 from stt import WhisperStreamingEngine
 from vad import SileroVADChunker
 
@@ -28,13 +33,49 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Meeting Transcript Sidecar", version="0.1.0")
-
 # 512 KB ≈ 16 s of 16 kHz mono Int16 audio — hard cap to protect memory.
 MAX_CHUNK_BYTES = 512_000
 
 # Override via WHISPER_MODEL env var (e.g. "tiny" for dev, "large-v3" for prod).
 MODEL_SIZE = os.getenv("WHISPER_MODEL", "base")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):  # type: ignore[type-arg]
+    db_path = os.getenv("DB_PATH", "data/transcripts.db")
+    db = Database(db_path)
+    await db.init()
+    app.state.db = db
+    logger.info("Database ready at %s", db_path)
+    yield
+    await db.close()
+
+
+app = FastAPI(title="Meeting Transcript Sidecar", version="0.1.0", lifespan=lifespan)
+
+
+async def _save_safe(db: Database, **kwargs: Any) -> None:
+    """Wrapper that logs DB write failures without crashing the background task."""
+    try:
+        await db.save_segment(**kwargs)
+    except Exception:
+        logger.exception("Failed to persist segment to DB")
+
+
+def _persist_if_final(db: Database, session_id: str, ev: dict[str, Any]) -> None:
+    """Fire-and-forget: persist a final transcript event to SQLite."""
+    if not ev.get("is_final"):
+        return
+    asyncio.create_task(
+        _save_safe(
+            db,
+            session_id=session_id,
+            segment_id=ev.get("segment_id") or str(uuid.uuid4()),
+            started_at=ev.get("start_time", 0.0),
+            ended_at=ev.get("end_time"),
+            text=ev["text"],
+        )
+    )
 
 
 @app.get("/health")
@@ -45,7 +86,13 @@ async def health() -> dict[str, str]:
 @app.websocket("/stream")
 async def stream(websocket: WebSocket) -> None:
     await websocket.accept()
-    logger.info("Client connected")
+    db: Database = websocket.app.state.db
+
+    session_id = str(uuid.uuid4())
+    session_started = time.time()
+    await db.create_session(session_id, session_started)
+    logger.info("Client connected, session %s", session_id)
+
     engine = WhisperStreamingEngine(model_size=MODEL_SIZE)
     vad = SileroVADChunker()
     loop = asyncio.get_event_loop()
@@ -63,15 +110,18 @@ async def stream(websocket: WebSocket) -> None:
                 events = await loop.run_in_executor(None, engine.process, audio)
                 for ev in events:
                     await websocket.send_json(ev)
+                    _persist_if_final(db, session_id, ev)
 
             if flush:
                 events = await loop.run_in_executor(None, engine.flush_and_reset)
                 for ev in events:
                     await websocket.send_json(ev)
+                    _persist_if_final(db, session_id, ev)
 
     except WebSocketDisconnect:
         vad.reset()
         for ev in engine.flush():
             with contextlib.suppress(Exception):
                 await websocket.send_json(ev)
-        logger.info("Client disconnected")
+        await db.end_session(session_id, time.time())
+        logger.info("Client disconnected, session %s ended", session_id)
