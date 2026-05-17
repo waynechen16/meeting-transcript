@@ -10,3 +10,6 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: full-pipeline tests that load real ML models (slower)",
+]

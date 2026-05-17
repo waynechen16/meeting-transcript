@@ -84,14 +84,14 @@ class WhisperStreamingEngine:
         audio = np.frombuffer(pcm_int16, dtype=np.int16).astype(np.float32) / 32768.0
         self.processor.insert_audio_chunk(audio)
         beg, end, text = self.processor.process_iter()
-        if text:
+        if text and text.strip():
             return [_make_event(text, beg, end, is_final=True)]
         return []
 
     def flush(self) -> list[dict]:
         """Drain remaining committed text — call when the connection closes."""
         beg, end, text = self.processor.finish()
-        if text:
+        if text and text.strip():
             return [_make_event(text, beg, end, is_final=True)]
         return []
 
